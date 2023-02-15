@@ -210,7 +210,7 @@ func (c *GameModeConfigController) createConfig(config *GameModeConfig) {
 		UpdateType: UpdateTypeCreated,
 	}
 
-	c.configs[config.Id] = config
+	c.Configs[config.Id] = config
 	for _, listener := range c.globalUpdateListeners {
 		listener(update)
 	}
@@ -222,7 +222,7 @@ func (c *GameModeConfigController) deleteConfig(config *GameModeConfig) {
 		UpdateType: UpdateTypeDeleted,
 	}
 
-	c.configs[config.Id] = nil
+	c.Configs[config.Id] = nil
 	for _, listener := range c.globalUpdateListeners {
 		listener(update)
 	}
@@ -237,7 +237,7 @@ func (c *GameModeConfigController) modifyConfig(config *GameModeConfig) {
 		UpdateType: UpdateTypeModified,
 	}
 
-	c.configs[config.Id] = config
+	c.Configs[config.Id] = config
 	for _, listener := range c.globalUpdateListeners {
 		listener(update)
 	}
