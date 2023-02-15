@@ -43,7 +43,8 @@ public final class GameModeConfig {
     public static final class MatchmakerInfo {
         private MatchMethod matchMethod;
         private SelectMethod selectMethod;
-        private Duration rate;
+        // rate is in nanoseconds
+        private long rate;
         private boolean backfill;
 
         public enum MatchMethod {
