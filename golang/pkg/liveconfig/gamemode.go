@@ -81,7 +81,7 @@ type KubernetesInfo struct {
 }
 
 type GameModeConfigController struct {
-	configs map[string]*GameModeConfig
+	Configs map[string]*GameModeConfig
 
 	configUpdateListeners map[string][]func(update ConfigUpdate[GameModeConfig])
 	globalUpdateListeners []func(update ConfigUpdate[GameModeConfig])
@@ -94,7 +94,7 @@ func NewGameModeConfigController() (*GameModeConfigController, error) {
 	}
 
 	controller := &GameModeConfigController{
-		configs: configs,
+		Configs: configs,
 
 		configUpdateListeners: make(map[string][]func(update ConfigUpdate[GameModeConfig])),
 		globalUpdateListeners: make([]func(update ConfigUpdate[GameModeConfig]), 0),
@@ -106,14 +106,6 @@ func NewGameModeConfigController() (*GameModeConfigController, error) {
 	}
 
 	return controller, nil
-}
-
-func (c *GameModeConfigController) GetConfig(id string) *GameModeConfig {
-	return c.configs[id]
-}
-
-func (c *GameModeConfigController) GetAllConfigs() map[string]*GameModeConfig {
-	return c.configs
 }
 
 func (c *GameModeConfigController) AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig])) {
