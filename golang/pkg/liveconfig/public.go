@@ -8,6 +8,12 @@ const (
 	UpdateTypeModified
 )
 
+var UpdateTypeNames = map[UpdateType]string{
+	UpdateTypeCreated:  "created",
+	UpdateTypeDeleted:  "deleted",
+	UpdateTypeModified: "modified",
+}
+
 type ConfigUpdate[T any] struct {
 	Config     *T
 	UpdateType UpdateType

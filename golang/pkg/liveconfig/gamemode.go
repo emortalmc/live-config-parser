@@ -3,10 +3,13 @@ package liveconfig
 import (
 	"encoding/json"
 	"github.com/fsnotify/fsnotify"
+	"go.uber.org/zap"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"time"
 )
 
@@ -92,6 +95,8 @@ type GameModeConfigController interface {
 type gameModeConfigControllerImpl struct {
 	GameModeConfigController
 
+	logger *zap.SugaredLogger
+
 	// configs is an internal cache of the configs.
 	// it can only be accessed by the controller itself.
 	configs map[string]*GameModeConfig
@@ -100,7 +105,7 @@ type gameModeConfigControllerImpl struct {
 	globalUpdateListeners []func(update ConfigUpdate[GameModeConfig])
 }
 
-func NewGameModeConfigController() (GameModeConfigController, error) {
+func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigController, error) {
 	configs, err := loadGameModes()
 	if err != nil {
 		return nil, err
@@ -202,6 +207,9 @@ func (c *gameModeConfigControllerImpl) listenForChanges() error {
 				if !ok {
 					return
 				}
+				if event.Name == "" || !strings.HasSuffix(event.Name, ".json") {
+					continue
+				}
 				var updateType UpdateType
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					updateType = UpdateTypeModified
@@ -213,10 +221,26 @@ func (c *gameModeConfigControllerImpl) listenForChanges() error {
 					continue
 				}
 
+				c.logger.Debugw("Game mode config changed", "filePath", event.Name, "updateType", UpdateTypeNames[updateType])
 				config, err := readGameMode(event.Name)
 				if err != nil {
-					log.Printf("Failed to parse game mode: %s", err)
+					c.logger.Errorw("Failed to parse game mode", err)
 					continue
+				}
+
+				// Verify that there's actually a change. File system events are not always reliable
+				// and editors will cause edits to double fire usually
+				if updateType == UpdateTypeModified {
+					oldConfig, ok := c.configs[config.Id]
+					if !ok {
+						c.logger.Warnw("failed to find old config", "configId", config.Id)
+						continue
+					}
+
+					if reflect.DeepEqual(oldConfig, config) {
+						c.logger.Debugw("no change in parsed config on system event", "configId", config.Id)
+						continue
+					}
 				}
 
 				update := ConfigUpdate[GameModeConfig]{
@@ -234,9 +258,7 @@ func (c *gameModeConfigControllerImpl) listenForChanges() error {
 				if !ok {
 					return
 				}
-				log.Printf("Error watching for game mode changes: %s", err)
-				// TODO handle?
-
+				c.logger.Errorw("Error watching for game mode changes", err)
 			}
 		}
 	}()
