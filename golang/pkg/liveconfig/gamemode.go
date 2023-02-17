@@ -60,7 +60,7 @@ type MapMatchmakerInfo struct {
 type MatchMethod string
 type SelectMethod string
 
-var (
+const (
 	MatchMethodInstant   MatchMethod = "INSTANT"
 	MatchMethodCountdown MatchMethod = "COUNTDOWN"
 
@@ -80,39 +80,76 @@ type KubernetesInfo struct {
 	FleetName string `json:"fleetName"`
 }
 
-type GameModeConfigController struct {
-	Configs map[string]*GameModeConfig
+type GameModeConfigController interface {
+
+	// GetConfigs returns a copy of the configs. This copy is not
+	// updates when a config is created/modified/deleted.
+	GetConfigs() map[string]*GameModeConfig
+	AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig]))
+	AddGlobalUpdateListener(listener func(update ConfigUpdate[GameModeConfig]))
+}
+
+type gameModeConfigControllerImpl struct {
+	GameModeConfigController
+
+	// configs is an internal cache of the configs.
+	// it can only be accessed by the controller itself.
+	configs map[string]*GameModeConfig
 
 	configUpdateListeners map[string][]func(update ConfigUpdate[GameModeConfig])
 	globalUpdateListeners []func(update ConfigUpdate[GameModeConfig])
 }
 
-func NewGameModeConfigController() (*GameModeConfigController, error) {
+func NewGameModeConfigController() (GameModeConfigController, error) {
 	configs, err := loadGameModes()
 	if err != nil {
 		return nil, err
 	}
 
-	controller := &GameModeConfigController{
-		Configs: configs,
+	c := &gameModeConfigControllerImpl{
+		configs: configs,
 
 		configUpdateListeners: make(map[string][]func(update ConfigUpdate[GameModeConfig])),
 		globalUpdateListeners: make([]func(update ConfigUpdate[GameModeConfig]), 0),
 	}
 
-	err = controller.listenForChanges()
+	c.AddGlobalUpdateListener(func(update ConfigUpdate[GameModeConfig]) {
+		cfg := update.Config
+
+		switch update.UpdateType {
+		case UpdateTypeCreated:
+			c.configs[cfg.Id] = cfg
+		case UpdateTypeModified:
+			oldCfg, ok := c.configs[cfg.Id]
+			if ok && oldCfg.Id != cfg.Id {
+				c.configs[oldCfg.Id] = nil
+			}
+			c.configs[cfg.Id] = cfg
+		case UpdateTypeDeleted:
+			c.configs[cfg.Id] = nil
+		}
+	})
+
+	err = c.listenForChanges()
 	if err != nil {
 		return nil, err
 	}
 
-	return controller, nil
+	return c, nil
+}
+func (c *gameModeConfigControllerImpl) GetConfigs() map[string]*GameModeConfig {
+	copied := make(map[string]*GameModeConfig)
+	for k, v := range c.configs {
+		copied[k] = v
+	}
+	return copied
 }
 
-func (c *GameModeConfigController) AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig])) {
+func (c *gameModeConfigControllerImpl) AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig])) {
 	c.configUpdateListeners[id] = append(c.configUpdateListeners[id], listener)
 }
 
-func (c *GameModeConfigController) AddGlobalUpdateListener(listener func(update ConfigUpdate[GameModeConfig])) {
+func (c *gameModeConfigControllerImpl) AddGlobalUpdateListener(listener func(update ConfigUpdate[GameModeConfig])) {
 	c.globalUpdateListeners = append(c.globalUpdateListeners, listener)
 }
 
@@ -147,7 +184,7 @@ func loadGameModes() (map[string]*GameModeConfig, error) {
 	return configs, nil
 }
 
-func (c *GameModeConfigController) listenForChanges() error {
+func (c *gameModeConfigControllerImpl) listenForChanges() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -165,30 +202,33 @@ func (c *GameModeConfigController) listenForChanges() error {
 				if !ok {
 					return
 				}
-				if event.Has(fsnotify.Write) {
-					config, err := readGameMode(event.Name)
-					if err != nil {
-						log.Printf("Failed to parse game mode: %s", err)
-						continue
-					}
+				var updateType UpdateType
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					updateType = UpdateTypeModified
+				} else if event.Op&fsnotify.Create == fsnotify.Create {
+					updateType = UpdateTypeCreated
+				} else if event.Op&fsnotify.Remove == fsnotify.Remove {
+					updateType = UpdateTypeDeleted
+				} else {
+					continue
+				}
 
-					c.modifyConfig(config)
-				} else if event.Has(fsnotify.Create) {
-					config, err := readGameMode(event.Name)
-					if err != nil {
-						log.Printf("Failed to parse game mode: %s", err)
-						continue
-					}
+				config, err := readGameMode(event.Name)
+				if err != nil {
+					log.Printf("Failed to parse game mode: %s", err)
+					continue
+				}
 
-					c.createConfig(config)
-				} else if event.Has(fsnotify.Remove) {
-					config, err := readGameMode(event.Name)
-					if err != nil {
-						log.Printf("Failed to parse game mode: %s", err)
-						continue
-					}
+				update := ConfigUpdate[GameModeConfig]{
+					UpdateType: updateType,
+					Config:     config,
+				}
 
-					c.deleteConfig(config)
+				for _, listener := range c.globalUpdateListeners {
+					listener(update)
+				}
+				for _, listener := range c.configUpdateListeners[config.Id] {
+					listener(update)
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -202,48 +242,6 @@ func (c *GameModeConfigController) listenForChanges() error {
 	}()
 
 	return nil
-}
-
-func (c *GameModeConfigController) createConfig(config *GameModeConfig) {
-	update := ConfigUpdate[GameModeConfig]{
-		Config:     config,
-		UpdateType: UpdateTypeCreated,
-	}
-
-	c.Configs[config.Id] = config
-	for _, listener := range c.globalUpdateListeners {
-		listener(update)
-	}
-}
-
-func (c *GameModeConfigController) deleteConfig(config *GameModeConfig) {
-	update := ConfigUpdate[GameModeConfig]{
-		Config:     config,
-		UpdateType: UpdateTypeDeleted,
-	}
-
-	c.Configs[config.Id] = nil
-	for _, listener := range c.globalUpdateListeners {
-		listener(update)
-	}
-	for _, listener := range c.configUpdateListeners[config.Id] {
-		listener(update)
-	}
-}
-
-func (c *GameModeConfigController) modifyConfig(config *GameModeConfig) {
-	update := ConfigUpdate[GameModeConfig]{
-		Config:     config,
-		UpdateType: UpdateTypeModified,
-	}
-
-	c.Configs[config.Id] = config
-	for _, listener := range c.globalUpdateListeners {
-		listener(update)
-	}
-	for _, listener := range c.configUpdateListeners[config.Id] {
-		listener(update)
-	}
 }
 
 func readGameMode(path string) (*GameModeConfig, error) {
