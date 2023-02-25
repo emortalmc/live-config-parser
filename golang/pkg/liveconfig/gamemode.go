@@ -14,8 +14,10 @@ import (
 )
 
 type GameModeConfig struct {
-	Id      string `json:"id"`
-	Enabled bool   `json:"enabled"`
+	Id              string `json:"id"`
+	Enabled         bool   `json:"enabled"`
+	FleetName       string `json:"fleetName"`
+	ProtocolVersion int    `json:"protocolVersion"`
 
 	FriendlyName string `json:"friendlyName"`
 	ActivityNoun string `json:"activityNoun"`
@@ -33,7 +35,6 @@ type GameModeConfig struct {
 	Maps []ConfigMap `json:"maps"`
 
 	MatchmakerInfo MatchmakerInfo `json:"matchmakerInfo"`
-	KubernetesInfo KubernetesInfo `json:"kubernetesInfo"`
 }
 
 type PartyRestrictions struct {
@@ -77,10 +78,6 @@ type MatchmakerInfo struct {
 
 	Rate     time.Duration `json:"rate"`
 	Backfill bool          `json:"backfill"`
-}
-
-type KubernetesInfo struct {
-	FleetName string `json:"fleetName"`
 }
 
 type GameModeConfigController interface {

@@ -13,6 +13,8 @@ import java.util.List;
 public final class GameModeConfig {
     private String id;
     private boolean enabled;
+    private String fleetName;
+    private int protocolVersion;
     private String friendlyName;
     private String activityNoun;
     private int minPlayers;
@@ -24,7 +26,6 @@ public final class GameModeConfig {
     private @Nullable TeamInfo teamInfo;
     private List<ConfigMap> maps;
     private MatchmakerInfo matchmakerInfo;
-    private KubernetesInfo kubernetesInfo;
 
     @Data
     public static final class PartyRestrictions {
@@ -54,10 +55,5 @@ public final class GameModeConfig {
         public enum SelectMethod {
             PLAYER_COUNT, AVAILABLE
         }
-    }
-
-    @Data
-    public static final class KubernetesInfo {
-        private String fleetName;
     }
 }
