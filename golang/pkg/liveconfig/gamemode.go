@@ -32,7 +32,7 @@ type GameModeConfig struct {
 	PartyRestrictions PartyRestrictions `json:"partyRestrictions"`
 	TeamInfo          TeamInfo          `json:"teamInfo"`
 
-	Maps []ConfigMap `json:"maps"`
+	Maps map[string]ConfigMap `json:"maps"`
 
 	MatchmakerInfo MatchmakerInfo `json:"matchmakerInfo"`
 }

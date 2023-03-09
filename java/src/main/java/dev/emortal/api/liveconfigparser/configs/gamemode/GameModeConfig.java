@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public final class GameModeConfig {
@@ -24,7 +25,7 @@ public final class GameModeConfig {
     private int npcIndex;
     private PartyRestrictions partyRestrictions;
     private @Nullable TeamInfo teamInfo;
-    private List<ConfigMap> maps;
+    private Map<String, ConfigMap> maps;
     private MatchmakerInfo matchmakerInfo;
 
     @Data
