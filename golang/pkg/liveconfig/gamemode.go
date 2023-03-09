@@ -85,6 +85,13 @@ type GameModeConfigController interface {
 	// GetConfigs returns a copy of the configs. This copy is not
 	// updates when a config is created/modified/deleted.
 	GetConfigs() map[string]*GameModeConfig
+
+	// GetCurrentConfig returns an up-to-date copy of the config.
+	GetCurrentConfig(id string) *GameModeConfig
+
+	// GetCurrentConfigList returns an up-to-date list of all configs.
+	GetCurrentConfigList() []*GameModeConfig
+
 	AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig]))
 	AddGlobalUpdateListener(listener func(update ConfigUpdate[GameModeConfig]))
 }
@@ -109,6 +116,8 @@ func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigContr
 	}
 
 	c := &gameModeConfigControllerImpl{
+		logger: logger.Named("liveconfig"),
+
 		configs: configs,
 
 		configUpdateListeners: make(map[string][]func(update ConfigUpdate[GameModeConfig])),
@@ -141,10 +150,33 @@ func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigContr
 }
 func (c *gameModeConfigControllerImpl) GetConfigs() map[string]*GameModeConfig {
 	copied := make(map[string]*GameModeConfig)
-	for k, v := range c.configs {
-		copied[k] = v
+	for k, original := range c.configs {
+		sCopy := *original
+		copied[k] = &sCopy
 	}
 	return copied
+}
+
+func (c *gameModeConfigControllerImpl) GetCurrentConfig(id string) *GameModeConfig {
+	// copy the config
+	original := c.configs[id]
+	if original == nil {
+		return nil
+	}
+
+	copied := *original
+	return &copied
+}
+
+func (c *gameModeConfigControllerImpl) GetCurrentConfigList() []*GameModeConfig {
+	var configs = make([]*GameModeConfig, 0)
+	for _, v := range c.configs {
+		if v == nil {
+			continue
+		}
+		configs = append(configs, v)
+	}
+	return configs
 }
 
 func (c *gameModeConfigControllerImpl) AddConfigUpdateListener(id string, listener func(update ConfigUpdate[GameModeConfig])) {
