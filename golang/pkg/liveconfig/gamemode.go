@@ -82,8 +82,7 @@ type MatchmakerInfo struct {
 
 type GameModeConfigController interface {
 
-	// GetConfigs returns a copy of the configs. This copy is not
-	// updates when a config is created/modified/deleted.
+	// GetConfigs returns the live configs. It is not safe to modify the returned map.
 	GetConfigs() map[string]*GameModeConfig
 
 	// GetCurrentConfig returns an up-to-date copy of the config.
@@ -149,12 +148,7 @@ func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigContr
 	return c, nil
 }
 func (c *gameModeConfigControllerImpl) GetConfigs() map[string]*GameModeConfig {
-	copied := make(map[string]*GameModeConfig)
-	for k, original := range c.configs {
-		sCopy := *original
-		copied[k] = &sCopy
-	}
-	return copied
+	return c.configs
 }
 
 func (c *gameModeConfigControllerImpl) GetCurrentConfig(id string) *GameModeConfig {
