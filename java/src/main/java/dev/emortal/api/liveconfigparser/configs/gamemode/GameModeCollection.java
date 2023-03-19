@@ -5,7 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import dev.emortal.api.liveconfigparser.adapter.DurationAdapter;
 import dev.emortal.api.liveconfigparser.configs.ConfigUpdate;
-import dev.emortal.api.liveconfigparser.utils.LiveConfigUtils;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
@@ -34,6 +36,7 @@ public class GameModeCollection {
             .create();
 
     private final WatchService watchService = FOLDER_PATH.getFileSystem().newWatchService();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     private final Map<String, GameModeConfig> configs = new HashMap<>();
     private final Map<String, List<Consumer<ConfigUpdate<GameModeConfig>>>> updateListeners = new ConcurrentHashMap<>();
@@ -84,45 +87,43 @@ public class GameModeCollection {
     }
 
     private void listenForUpdates() {
-        LiveConfigUtils.createThread("gamemodes", () -> {
-            while (true) {
-                try {
-                    WatchKey key = this.watchService.take();
-                    List<WatchEvent<?>> events = key.pollEvents();
+        executor.scheduleAtFixedRate(() -> {
+            try {
+                WatchKey key = this.watchService.take();
+                List<WatchEvent<?>> events = key.pollEvents();
 
-                    for (WatchEvent<?> event : events) {
-                        WatchEvent.Kind<?> kind = event.kind();
-                        if (kind == StandardWatchEventKinds.OVERFLOW) {
-                            continue;
-                        }
-
-                        ConfigUpdate.Type updateType = switch (kind.name()) {
-                            case "ENTRY_DELETE" -> ConfigUpdate.Type.DELETE;
-                            case "ENTRY_CREATE" -> ConfigUpdate.Type.CREATE;
-                            case "ENTRY_MODIFY" -> ConfigUpdate.Type.MODIFY;
-                            default -> throw new IllegalStateException("Unexpected watch event type: " + kind);
-                        };
-
-                        WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
-
-                        GameModeConfig config;
-
-                        try (BufferedReader reader = Files.newBufferedReader(FOLDER_PATH.resolve(pathEvent.context()))) {
-                            config = GSON.fromJson(reader, GameModeConfig.class);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return;
-                        }
-
-                        ConfigUpdate<GameModeConfig> update = new ConfigUpdate<>(config.getId(), config, updateType);
-                        this.updateListeners.get(config.getId()).forEach(listener -> listener.accept(update));
-                        this.globalListeners.forEach(listener -> listener.accept(update));
+                for (WatchEvent<?> event : events) {
+                    WatchEvent.Kind<?> kind = event.kind();
+                    if (kind == StandardWatchEventKinds.OVERFLOW) {
+                        continue;
                     }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+
+                    ConfigUpdate.Type updateType = switch (kind.name()) {
+                        case "ENTRY_DELETE" -> ConfigUpdate.Type.DELETE;
+                        case "ENTRY_CREATE" -> ConfigUpdate.Type.CREATE;
+                        case "ENTRY_MODIFY" -> ConfigUpdate.Type.MODIFY;
+                        default -> throw new IllegalStateException("Unexpected watch event type: " + kind);
+                    };
+
+                    WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
+
+                    GameModeConfig config;
+
+                    try (BufferedReader reader = Files.newBufferedReader(FOLDER_PATH.resolve(pathEvent.context()))) {
+                        config = GSON.fromJson(reader, GameModeConfig.class);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return;
+                    }
+
+                    ConfigUpdate<GameModeConfig> update = new ConfigUpdate<>(config.getId(), config, updateType);
+                    this.updateListeners.get(config.getId()).forEach(listener -> listener.accept(update));
+                    this.globalListeners.forEach(listener -> listener.accept(update));
                 }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     /**
