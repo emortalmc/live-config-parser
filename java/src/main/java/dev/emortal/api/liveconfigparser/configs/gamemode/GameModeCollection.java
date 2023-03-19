@@ -27,8 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GameModeCollection {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GameModeCollection.class);
     public static final Path FOLDER_PATH = Path.of("./config/gamemodes");
 
     private static final Gson GSON = new GsonBuilder()
@@ -46,6 +49,7 @@ public class GameModeCollection {
         if (Files.notExists(FOLDER_PATH)) {
             throw new IllegalStateException("%s folder not found".formatted(FOLDER_PATH.toAbsolutePath()));
         }
+        FOLDER_PATH.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
 
         List<GameModeConfig> allConfigs = this.loadAllConfigs();
         for (GameModeConfig config : allConfigs) {
@@ -89,7 +93,8 @@ public class GameModeCollection {
     private void listenForUpdates() {
         executor.scheduleAtFixedRate(() -> {
             try {
-                WatchKey key = this.watchService.take();
+                WatchKey key = this.watchService.poll();
+                if (key == null) return;
                 List<WatchEvent<?>> events = key.pollEvents();
 
                 for (WatchEvent<?> event : events) {
@@ -106,29 +111,34 @@ public class GameModeCollection {
                     };
 
                     WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
+                    final Path path = pathEvent.context();
+                    final String id = path.getFileName().toString().replace(".json", "");
 
-                    GameModeConfig config;
-
-                    try (BufferedReader reader = Files.newBufferedReader(FOLDER_PATH.resolve(pathEvent.context()))) {
-                        config = GSON.fromJson(reader, GameModeConfig.class);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        return;
+                    final GameModeConfig config;
+                    if (updateType != ConfigUpdate.Type.DELETE) {
+                        try (BufferedReader reader = Files.newBufferedReader(FOLDER_PATH.resolve(path))) {
+                            config = GSON.fromJson(reader, GameModeConfig.class);
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to read config file: " + path, e);
+                            return;
+                        }
+                    } else {
+                        config = null;
                     }
 
-                    ConfigUpdate<GameModeConfig> update = new ConfigUpdate<>(config.getId(), config, updateType);
-                    this.updateListeners.get(config.getId()).forEach(listener -> listener.accept(update));
+                    ConfigUpdate<GameModeConfig> update = new ConfigUpdate<>(id, config, updateType);
+                    if (this.updateListeners.containsKey(id)) this.updateListeners.get(id).forEach(listener -> listener.accept(update));
                     this.globalListeners.forEach(listener -> listener.accept(update));
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                key.reset();
+            } catch (final Exception exception) {
+                LOGGER.error("Error while trying to dispatch update", exception);
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     /**
-     *
-     * @param id the id of the config to get
+     * @param id             the id of the config to get
      * @param updateListener a listener that will be called when the config is deleted or modified
      * @return the config
      */
