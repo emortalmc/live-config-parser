@@ -2,7 +2,6 @@ package liveconfig
 
 type ConfigItem struct {
 	Material string   `json:"material"`
-	Slot     int      `json:"slot"`
 	Name     string   `json:"name"`
 	Lore     []string `json:"lore"`
 }

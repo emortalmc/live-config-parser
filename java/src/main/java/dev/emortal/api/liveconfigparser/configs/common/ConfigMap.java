@@ -6,12 +6,9 @@ import lombok.Data;
 public class ConfigMap {
     private String id;
     private boolean enabled;
-    private String friendlyName;
-    private ConfigItem displayItem;
-    private MatchmakerInfo matchmakerInfo;
 
-    @Data
-    public static class MatchmakerInfo {
-        private float chance;
-    }
+    private String friendlyName;
+    private int priority;
+
+    private ConfigItem displayItem;
 }

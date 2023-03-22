@@ -15,22 +15,20 @@ public final class GameModeConfig {
     private String id;
     private boolean enabled;
     private String fleetName;
-    private int protocolVersion;
+    private int priority;
     private String friendlyName;
     private String activityNoun;
     private int minPlayers;
     private int maxPlayers;
-    private ConfigItem displayItem;
-    private ConfigNPC displayNpc;
-    private int npcIndex;
+    private @Nullable ConfigItem displayItem;
+    private @Nullable ConfigNPC displayNpc;
     private PartyRestrictions partyRestrictions;
     private @Nullable TeamInfo teamInfo;
-    private Map<String, ConfigMap> maps;
+    private @Nullable Map<String, ConfigMap> maps;
     private MatchmakerInfo matchmakerInfo;
 
     @Data
     public static final class PartyRestrictions {
-        private boolean allowParties;
         private int minSize;
         private int maxSize;
     }

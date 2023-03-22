@@ -14,10 +14,13 @@ import (
 )
 
 type GameModeConfig struct {
-	Id              string `json:"id"`
-	Enabled         bool   `json:"enabled"`
-	FleetName       string `json:"fleetName"`
-	ProtocolVersion int    `json:"protocolVersion"`
+	Id        string `json:"id"`
+	Enabled   bool   `json:"enabled"`
+	FleetName string `json:"fleetName"`
+
+	// Priority determines the order for things such as the NPC and item display
+	// Lower numbers are higher priority
+	Priority int `json:"priority"`
 
 	FriendlyName string `json:"friendlyName"`
 	ActivityNoun string `json:"activityNoun"`
@@ -25,22 +28,23 @@ type GameModeConfig struct {
 	MinPlayers int `json:"minPlayers"`
 	MaxPlayers int `json:"maxPlayers"`
 
-	DisplayItem ConfigItem `json:"displayItem"`
-	DisplayNpc  ConfigNPC  `json:"displayNpc"`
-	NpcIndex    int        `json:"npcIndex"`
+	// DisplayItem optional
+	DisplayItem *ConfigItem `json:"displayItem"`
+	// DisplayNpc optional
+	DisplayNpc *ConfigNPC `json:"displayNpc"`
 
-	PartyRestrictions PartyRestrictions `json:"partyRestrictions"`
-	TeamInfo          TeamInfo          `json:"teamInfo"`
+	PartyRestrictions *PartyRestrictions `json:"partyRestrictions"`
+	TeamInfo          *TeamInfo          `json:"teamInfo"`
 
-	Maps map[string]ConfigMap `json:"maps"`
+	Maps map[string]*ConfigMap `json:"maps"`
 
-	MatchmakerInfo MatchmakerInfo `json:"matchmakerInfo"`
+	MatchmakerInfo *MatchmakerInfo `json:"matchmakerInfo"`
 }
 
 type PartyRestrictions struct {
-	AllowParties bool `json:"allowParties"`
-	MinSize      int  `json:"minSize"`
-	MaxSize      int  `json:"maxSize"`
+	MinSize int `json:"minSize"`
+	// MaxSize optional
+	MaxSize *int `json:"maxSize"`
 }
 
 type TeamInfo struct {
@@ -52,13 +56,10 @@ type ConfigMap struct {
 	Id      string `json:"id"`
 	Enabled bool   `json:"enabled"`
 
-	FriendlyName   string            `json:"friendlyName"`
-	DisplayItem    ConfigItem        `json:"displayItem"`
-	MatchmakerInfo MapMatchmakerInfo `json:"matchmakerInfo"`
-}
+	FriendlyName string `json:"friendlyName"`
+	Priority     int    `json:"priority"`
 
-type MapMatchmakerInfo struct {
-	Chance float32 `json:"chance"`
+	DisplayItem *ConfigItem `json:"displayItem"`
 }
 
 type MatchMethod string
