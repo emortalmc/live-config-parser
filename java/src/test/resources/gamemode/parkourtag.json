@@ -13,6 +13,7 @@
 
   "displayItem": {
     "material": "minecraft:name_tag",
+    "slot": 0,
     "name": "<green><bold>ParkourTag</bold></green>",
     "lore": [
       "<gray>Chase the hiders or flee from the seekers</gray>",
