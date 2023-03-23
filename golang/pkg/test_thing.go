@@ -29,7 +29,10 @@ func main() {
 	})
 
 	configs := configController.GetConfigs()
-	logger.Infow("Initial Configs", "count", len(configs), "values", configs)
+
+	for _, config := range configs {
+		logger.Infow("Initial Config", "values", config)
+	}
 
 	// Wait forever
 	select {}

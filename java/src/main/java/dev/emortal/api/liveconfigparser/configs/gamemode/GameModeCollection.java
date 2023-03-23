@@ -5,9 +5,12 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import dev.emortal.api.liveconfigparser.adapter.DurationAdapter;
 import dev.emortal.api.liveconfigparser.configs.ConfigUpdate;
+
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
@@ -27,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +85,7 @@ public class GameModeCollection {
                     .filter(path -> path.getFileName().toString().endsWith(".json"))
                     .map(path -> {
                         try {
-                            return (GameModeConfig) GSON.fromJson(new JsonReader(Files.newBufferedReader(path)), GameModeConfig.class);
+                            return this.loadConfig(path);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -91,7 +95,7 @@ public class GameModeCollection {
     }
 
     private void listenForUpdates() {
-        executor.scheduleAtFixedRate(() -> {
+        this.executor.scheduleAtFixedRate(() -> {
             try {
                 WatchKey key = this.watchService.poll();
                 if (key == null) return;
@@ -112,12 +116,19 @@ public class GameModeCollection {
 
                     WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
                     final Path path = pathEvent.context();
-                    final String id = path.getFileName().toString().replace(".json", "");
+                    if (!path.getFileName().toString().endsWith(".json")) {
+                        LOGGER.warn("Non-json file was modified: " + path);
+                        continue;
+                    }
+
+                    final Optional<GameModeConfig> optionalOldConfig = this.configs.values().stream()
+                            .filter(config -> config.getPath().equals(path))
+                            .findFirst();
 
                     final GameModeConfig config;
                     if (updateType != ConfigUpdate.Type.DELETE) {
-                        try (BufferedReader reader = Files.newBufferedReader(FOLDER_PATH.resolve(path))) {
-                            config = GSON.fromJson(reader, GameModeConfig.class);
+                        try {
+                            config = this.loadConfig(path);
                         } catch (IOException e) {
                             LOGGER.error("Failed to read config file: " + path, e);
                             return;
@@ -126,8 +137,11 @@ public class GameModeCollection {
                         config = null;
                     }
 
+                    final String id = optionalOldConfig.isPresent() ? optionalOldConfig.get().getId() : config.getId();
+
                     ConfigUpdate<GameModeConfig> update = new ConfigUpdate<>(id, config, updateType);
-                    if (this.updateListeners.containsKey(id)) this.updateListeners.get(id).forEach(listener -> listener.accept(update));
+                    if (this.updateListeners.containsKey(id))
+                        this.updateListeners.get(id).forEach(listener -> listener.accept(update));
                     this.globalListeners.forEach(listener -> listener.accept(update));
                 }
                 key.reset();
@@ -135,6 +149,14 @@ public class GameModeCollection {
                 LOGGER.error("Error while trying to dispatch update", exception);
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
+    }
+
+    private @NotNull GameModeConfig loadConfig(@NotNull Path path) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            GameModeConfig config = GSON.fromJson(reader, GameModeConfig.class);
+            config.setPath(path);
+            return config;
+        }
     }
 
     /**

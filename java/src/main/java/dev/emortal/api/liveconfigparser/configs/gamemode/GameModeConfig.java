@@ -6,12 +6,12 @@ import dev.emortal.api.liveconfigparser.configs.common.ConfigNPC;
 import lombok.Data;
 import org.jetbrains.annotations.Nullable;
 
-import java.time.Duration;
-import java.util.List;
+import java.nio.file.Path;
 import java.util.Map;
 
 @Data
 public final class GameModeConfig {
+    private Path path;
     private String id;
     private boolean enabled;
     private String fleetName;
