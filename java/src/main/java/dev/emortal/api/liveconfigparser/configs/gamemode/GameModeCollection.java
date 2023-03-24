@@ -36,24 +36,35 @@ import org.slf4j.LoggerFactory;
 
 public class GameModeCollection {
     private static final Logger LOGGER = LoggerFactory.getLogger(GameModeCollection.class);
-    public static final Path FOLDER_PATH = Path.of("./config/gamemodes");
+    public static final Path DEFAULT_PATH = Path.of("./config/gamemodes");
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(Duration.class, new DurationAdapter())
             .create();
 
-    private final WatchService watchService = FOLDER_PATH.getFileSystem().newWatchService();
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final WatchService watchService;
+    private final Path basePath;
 
     private final Map<String, GameModeConfig> configs = new HashMap<>();
     private final Map<String, List<Consumer<ConfigUpdate<GameModeConfig>>>> updateListeners = new ConcurrentHashMap<>();
     private final List<Consumer<ConfigUpdate<GameModeConfig>>> globalListeners = new ArrayList<>();
 
+
     public GameModeCollection() throws IOException {
-        if (Files.notExists(FOLDER_PATH)) {
-            throw new IllegalStateException("%s folder not found".formatted(FOLDER_PATH.toAbsolutePath()));
+        this(DEFAULT_PATH);
+    }
+
+    public GameModeCollection(@NotNull Path path) throws IOException {
+        if (Files.notExists(path)) {
+            throw new IllegalStateException("%s folder not found".formatted(path.toAbsolutePath()));
         }
-        FOLDER_PATH.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+
+        this.basePath = path;
+
+        LOGGER.info("Watching GameMode config changes in %s".formatted(path.toAbsolutePath()));
+        this.watchService = this.basePath.getFileSystem().newWatchService();
+        path.register(this.watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
 
         List<GameModeConfig> allConfigs = this.loadAllConfigs();
         for (GameModeConfig config : allConfigs) {
@@ -79,7 +90,7 @@ public class GameModeCollection {
     }
 
     private List<GameModeConfig> loadAllConfigs() throws IOException {
-        try (Stream<Path> stream = Files.list(FOLDER_PATH)) {
+        try (Stream<Path> stream = Files.list(this.basePath)) {
             return stream
                     .filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".json"))
@@ -115,15 +126,24 @@ public class GameModeCollection {
                     };
 
                     WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
-                    final Path path = pathEvent.context();
+                    final Path path = this.basePath.resolve(pathEvent.context());
                     if (!path.getFileName().toString().endsWith(".json")) {
                         LOGGER.warn("Non-json file was modified: " + path);
                         continue;
                     }
 
+                    // We use the path to find the file here as it might have been deleted
+                    // It's optional as the file might have just been created
                     final Optional<GameModeConfig> optionalOldConfig = this.configs.values().stream()
-                            .filter(config -> config.getPath().equals(path))
-                            .findFirst();
+                            .filter(config -> {
+                                try {
+                                    return Files.isSameFile(config.getPath(), path);
+                                } catch (IOException e) {
+                                    LOGGER.error("Failed to check if files are the same", e);
+                                    return false;
+                                }
+                            }).findFirst();
+
 
                     final GameModeConfig config;
                     if (updateType != ConfigUpdate.Type.DELETE) {

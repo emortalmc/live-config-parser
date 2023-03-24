@@ -11,7 +11,7 @@ public class ConfigCollection {
     private final @NotNull Optional<GameModeCollection> gameModeCollection;
 
     public ConfigCollection() throws IOException {
-        if (Files.exists(GameModeCollection.FOLDER_PATH)) {
+        if (Files.exists(GameModeCollection.DEFAULT_PATH)) {
             this.gameModeCollection = Optional.of(new GameModeCollection());
         } else {
             this.gameModeCollection = Optional.empty();
