@@ -6,6 +6,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -186,9 +187,9 @@ func (c *gameModeConfigControllerImpl) AddGlobalUpdateListener(listener func(upd
 func loadGameModes() (map[string]*GameModeConfig, error) {
 	var configs = make(map[string]*GameModeConfig)
 
-	err := filepath.WalkDir("./config/gamemodes", func(path string, d os.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
+	err := filepath.Walk("./config/gamemodes", func(path string, d fs.FileInfo, err error) error {
+		if d.IsDir() || d.Mode().IsDir() {
+			return filepath.SkipDir
 		}
 
 		file, err := os.Open(path)
