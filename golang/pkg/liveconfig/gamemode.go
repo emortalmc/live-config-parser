@@ -103,6 +103,8 @@ type gameModeConfigControllerImpl struct {
 
 	logger *zap.SugaredLogger
 
+	path string
+
 	// configs is an internal cache of the configs.
 	// it can only be accessed by the controller itself.
 	configs map[string]*GameModeConfig
@@ -112,7 +114,11 @@ type gameModeConfigControllerImpl struct {
 }
 
 func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigController, error) {
-	configs, err := loadGameModes()
+	return NewGameModeConfigControllerWithPath(logger, "./config/gamemodes")
+}
+
+func NewGameModeConfigControllerWithPath(logger *zap.SugaredLogger, path string) (GameModeConfigController, error) {
+	configs, err := loadGameModes(path)
 	if err != nil {
 		return nil, err
 	}
@@ -184,11 +190,15 @@ func (c *gameModeConfigControllerImpl) AddGlobalUpdateListener(listener func(upd
 	c.globalUpdateListeners = append(c.globalUpdateListeners, listener)
 }
 
-func loadGameModes() (map[string]*GameModeConfig, error) {
+func loadGameModes(path string) (map[string]*GameModeConfig, error) {
 	var configs = make(map[string]*GameModeConfig)
 
-	err := filepath.Walk("./config/gamemodes", func(path string, d fs.FileInfo, err error) error {
-		if d.IsDir() || d.Mode().IsDir() {
+	err := filepath.Walk(path, func(path string, d fs.FileInfo, err error) error {
+
+		if d == nil || d.IsDir() ||
+			strings.Contains(path, "/") || // ignore files in subdirectories, otherwise it'll load that in the original symlink dir
+			strings.HasPrefix(path, ".") || // ignore hidden files
+			!strings.HasSuffix(path, ".json") { // ignore non-json files
 			return nil
 		}
 
@@ -224,7 +234,7 @@ func (c *gameModeConfigControllerImpl) listenForChanges() error {
 		return err
 	}
 
-	err = watcher.Add("./config/gamemodes")
+	err = watcher.Add(c.path)
 	if err != nil {
 		return err
 	}

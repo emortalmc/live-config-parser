@@ -12,14 +12,8 @@ func main() {
 		log.Fatalf("Failed to create logger: %s", err)
 	}
 	logger := unsugared.Sugar()
-	defer func(logger *zap.SugaredLogger) {
-		err := logger.Sync()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(logger)
 
-	configController, err := liveconfig.NewGameModeConfigController(logger)
+	configController, err := liveconfig.NewGameModeConfigControllerWithPath(logger, ".")
 	if err != nil {
 		logger.Errorw("Failed to create config controller", err)
 	}
