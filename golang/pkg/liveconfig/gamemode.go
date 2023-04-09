@@ -189,7 +189,7 @@ func loadGameModes() (map[string]*GameModeConfig, error) {
 
 	err := filepath.Walk("./config/gamemodes", func(path string, d fs.FileInfo, err error) error {
 		if d.IsDir() || d.Mode().IsDir() {
-			return filepath.SkipDir
+			return nil
 		}
 
 		file, err := os.Open(path)
