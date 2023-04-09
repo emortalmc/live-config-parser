@@ -126,6 +126,7 @@ func NewGameModeConfigControllerWithPath(logger *zap.SugaredLogger, path string)
 	c := &gameModeConfigControllerImpl{
 		logger: logger.Named("liveconfig"),
 
+		path:    path,
 		configs: configs,
 
 		configUpdateListeners: make(map[string][]func(update ConfigUpdate[GameModeConfig])),
@@ -194,9 +195,9 @@ func loadGameModes(path string) (map[string]*GameModeConfig, error) {
 	var configs = make(map[string]*GameModeConfig)
 
 	err := filepath.Walk(path, func(path string, d fs.FileInfo, err error) error {
-
 		if d == nil || d.IsDir() ||
-			strings.Contains(path, "/") || // ignore files in subdirectories, otherwise it'll load that in the original symlink dir
+			//strings.Contains(path, "/") || // ignore files in subdirectories, otherwise it'll load that in the original symlink dir
+			// Removed for now because it was causing issues when loading subdirs, e.g. ./config/gamemodes/x.json
 			strings.HasPrefix(path, ".") || // ignore hidden files
 			!strings.HasSuffix(path, ".json") { // ignore non-json files
 			return nil
