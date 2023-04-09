@@ -186,25 +186,25 @@ func (c *gameModeConfigControllerImpl) AddGlobalUpdateListener(listener func(upd
 func loadGameModes() (map[string]*GameModeConfig, error) {
 	var configs = make(map[string]*GameModeConfig)
 
-	err := filepath.Walk("./config/gamemodes", func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+	err := filepath.WalkDir("./config/gamemodes", func(path string, d os.DirEntry, err error) error {
+		if d.IsDir() {
 			return nil
 		}
 
 		file, err := os.Open(path)
 		if err != nil {
-			return fmt.Errorf("failed to open file: %w", err)
+			return fmt.Errorf("failed to open file (path: %s): %v", path, err)
 		}
 		defer func(file *os.File) {
 			err := file.Close()
 			if err != nil {
-				log.Printf("Failed to close file: %s", err)
+				log.Printf("Failed to close file(%s): %v", path, err)
 			}
 		}(file)
 
 		config, err := parseGameMode(file)
 		if err != nil {
-			return fmt.Errorf("failed to parse config: %w", err)
+			return fmt.Errorf("failed to parse config (path: %s): %v", path, err)
 		}
 		configs[config.Id] = config
 
