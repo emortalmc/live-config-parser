@@ -2,6 +2,7 @@ package liveconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
 	"io"
@@ -143,7 +144,7 @@ func NewGameModeConfigController(logger *zap.SugaredLogger) (GameModeConfigContr
 
 	err = c.listenForChanges()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to listen for changes: %w", err)
 	}
 
 	return c, nil
@@ -192,7 +193,7 @@ func loadGameModes() (map[string]*GameModeConfig, error) {
 
 		file, err := os.Open(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open file: %w", err)
 		}
 		defer func(file *os.File) {
 			err := file.Close()
@@ -202,9 +203,12 @@ func loadGameModes() (map[string]*GameModeConfig, error) {
 		}(file)
 
 		config, err := parseGameMode(file)
+		if err != nil {
+			return fmt.Errorf("failed to parse config: %w", err)
+		}
 		configs[config.Id] = config
 
-		return err
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -293,7 +297,7 @@ func (c *gameModeConfigControllerImpl) listenForChanges() error {
 func readGameMode(path string) (*GameModeConfig, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
@@ -310,7 +314,7 @@ func parseGameMode(reader io.Reader) (*GameModeConfig, error) {
 
 	bytes, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	err = json.Unmarshal(bytes, &config)
