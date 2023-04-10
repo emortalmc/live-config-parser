@@ -36,7 +36,6 @@ type GameModeConfig struct {
 	DisplayNpc *ConfigNPC `json:"displayNpc"`
 
 	PartyRestrictions *PartyRestrictions `json:"partyRestrictions"`
-	TeamInfo          *TeamInfo          `json:"teamInfo"`
 
 	Maps map[string]*ConfigMap `json:"maps"`
 
@@ -47,11 +46,6 @@ type PartyRestrictions struct {
 	MinSize int `json:"minSize"`
 	// MaxSize optional
 	MaxSize *int `json:"maxSize"`
-}
-
-type TeamInfo struct {
-	TeamSize  int `json:"teamSize"`
-	TeamCount int `json:"teamCount"`
 }
 
 type ConfigMap struct {

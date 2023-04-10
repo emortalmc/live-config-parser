@@ -23,7 +23,6 @@ public final class GameModeConfig {
     private @Nullable ConfigItem displayItem;
     private @Nullable ConfigNPC displayNpc;
     private PartyRestrictions partyRestrictions;
-    private @Nullable TeamInfo teamInfo;
     private @Nullable Map<String, ConfigMap> maps;
     private MatchmakerInfo matchmakerInfo;
 
@@ -31,12 +30,6 @@ public final class GameModeConfig {
     public static final class PartyRestrictions {
         private int minSize;
         private int maxSize;
-    }
-
-    @Data
-    public static final class TeamInfo {
-        private int teamSize;
-        private int teamCount;
     }
 
     @Data
