@@ -185,12 +185,22 @@ public class GameModeCollection {
      * @return the config
      */
     public @NotNull GameModeConfig getConfig(String id, Consumer<ConfigUpdate<GameModeConfig>> updateListener) throws IllegalArgumentException {
+        GameModeConfig config = this.getConfig(id);
+
+        this.updateListeners.computeIfAbsent(id, k -> new ArrayList<>()).add(updateListener);
+        return config;
+    }
+
+    /**
+     * @param id the id of the config to get
+     * @return the config
+     */
+    public @NotNull GameModeConfig getConfig(String id) throws IllegalArgumentException {
         GameModeConfig config = this.configs.get(id);
         if (config == null) {
             throw new IllegalArgumentException("Config %s not found".formatted(id));
         }
 
-        this.updateListeners.computeIfAbsent(id, k -> new ArrayList<>()).add(updateListener);
         return config;
     }
 
@@ -203,5 +213,12 @@ public class GameModeCollection {
         this.globalListeners.add(updateListener);
 
         return configs;
+    }
+
+    /**
+     * @return a copy of the original configs
+     */
+    public List<GameModeConfig> getAllConfigs() {
+        return new ArrayList<>(this.configs.values());
     }
 }
