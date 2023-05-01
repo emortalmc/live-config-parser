@@ -20,7 +20,7 @@ public class GameModeConfigTest {
             fileStream.forEach(path -> {
                 try (BufferedReader reader = Files.newBufferedReader(path)) {
                     GameModeConfig config = GSON.fromJson(reader, GameModeConfig.class);
-                    config.setPath(path);
+                    config.setFileName(path.getFileName().toString());
 
                     System.out.println("Config (" + config.getId() + "): " + config);
                 } catch (IOException e) {

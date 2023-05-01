@@ -1,16 +1,15 @@
 package dev.emortal.api.liveconfigparser.configs;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class ConfigUpdate<T> {
-    private final @NotNull String configId;
-    private final @Nullable T config;
+public class ConfigUpdate<T extends Config> {
+    private final @NotNull String fileName;
+    private final @NotNull T config;
 
     private final @NotNull Type type;
 
-    public ConfigUpdate(@NotNull String configId, @Nullable T config, @NotNull Type type) {
-        this.configId = configId;
+    public ConfigUpdate(@NotNull String fileName, @NotNull T config, @NotNull Type type) {
+        this.fileName = fileName;
         this.config = config;
         this.type = type;
     }
@@ -21,15 +20,15 @@ public class ConfigUpdate<T> {
         DELETE
     }
 
-    public @NotNull String getConfigId() {
-        return configId;
+    public @NotNull String getFileName() {
+        return this.fileName;
     }
 
-    public @Nullable T getConfig() {
-        return config;
+    public @NotNull T getConfig() {
+        return this.config;
     }
 
     public @NotNull Type getType() {
-        return type;
+        return this.type;
     }
 }

@@ -2,15 +2,18 @@ package dev.emortal.api.liveconfigparser;
 
 import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeCollection;
 import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeConfig;
+import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.util.Config;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
-public class ManualTestMain {
+public class ManualTestK8sMain {
     public static void main(String[] args) throws IOException, ApiException {
-        final GameModeCollection collection = new GameModeCollection(Path.of("testfiles"));
+        ApiClient apiClient = Config.defaultClient();
+
+        final GameModeCollection collection = new GameModeCollection(apiClient, "emortalmc", "gamemodes");
         final List<GameModeConfig> configs = collection.getAllConfigs(update -> {
             System.out.println("Updated: " + update.getConfig().getId() + " (type: " + update.getType() + ")");
         });

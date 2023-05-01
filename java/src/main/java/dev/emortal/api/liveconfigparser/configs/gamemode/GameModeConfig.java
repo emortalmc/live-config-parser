@@ -1,17 +1,18 @@
 package dev.emortal.api.liveconfigparser.configs.gamemode;
 
+import dev.emortal.api.liveconfigparser.configs.Config;
 import dev.emortal.api.liveconfigparser.configs.common.ConfigItem;
 import dev.emortal.api.liveconfigparser.configs.common.ConfigMap;
 import dev.emortal.api.liveconfigparser.configs.common.ConfigNPC;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.file.Path;
 import java.util.Map;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-public final class GameModeConfig {
-    private Path path;
+public final class GameModeConfig extends Config {
     private String id;
     private boolean enabled;
     private String fleetName;
