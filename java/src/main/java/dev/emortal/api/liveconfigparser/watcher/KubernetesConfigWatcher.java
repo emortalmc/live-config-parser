@@ -59,7 +59,6 @@ public class KubernetesConfigWatcher {
 
         this.indexInformer = this.startInformer();
 
-        System.out.println("Starting informer");
         try {
             boolean result = this.firstReqLatch.await(10, TimeUnit.SECONDS);
             if (!result) {
@@ -76,8 +75,14 @@ public class KubernetesConfigWatcher {
         SharedInformerFactory factory = new SharedInformerFactory(this.kubeClient);
 
         SharedIndexInformer<V1ConfigMap> configInformer = factory.sharedIndexInformerFor((CallGeneratorParams params) -> {
-                    int parsedVersion = Integer.parseInt(params.resourceVersion);
-                    String version = String.valueOf(parsedVersion == 0 ? parsedVersion : parsedVersion - 1);
+                    String version;
+                    if (params.resourceVersion == null) {
+                        version = null;
+                    } else {
+                        int parsedVersion = Integer.parseInt(params.resourceVersion);
+                        version = String.valueOf(parsedVersion == 0 ? parsedVersion : parsedVersion - 1);
+                    }
+
                     return this.api.listNamespacedConfigMapCall(
                             this.namespace, null, null, null,
                             "metadata.name=" + this.configMapName, null, null,
@@ -86,38 +91,40 @@ public class KubernetesConfigWatcher {
                 },
                 V1ConfigMap.class, V1ConfigMapList.class, 10 * 60 * 1000L);
 
-        configInformer.addEventHandler(new ResourceEventHandler<>() {
-            @Override
-            public void onAdd(V1ConfigMap obj) {
-                if (!obj.getMetadata().getName().equals(configMapName)) return;
-
-                if (configHashes.size() > 0) {
-                    LOGGER.warn("ConfigMap created but should already exist? (namespace: {}, name: {})", namespace, configMapName);
-                }
-
-                processUpdate(obj);
-            }
-
-            @Override
-            public void onUpdate(V1ConfigMap oldObj, V1ConfigMap newObj) {
-                V1ObjectMeta meta = newObj.getMetadata();
-                if (meta == null || meta.getName() == null || !meta.getName().equals(configMapName)) return;
-
-                LOGGER.info("ConfigMap updated (namespace: {}, name: {})", namespace, configMapName);
-                processUpdate(newObj);
-
-                firstReqLatch.countDown();
-            }
-
-            @Override
-            public void onDelete(V1ConfigMap obj, boolean deletedFinalStateUnknown) {
-                LOGGER.info("ConfigMap deleted (namespace: {}, name: {})", namespace, configMapName);
-            }
-        });
+        configInformer.addEventHandler(new EventHandler());
 
         factory.startAllRegisteredInformers();
 
         return configInformer;
+    }
+
+    private final class EventHandler implements ResourceEventHandler<V1ConfigMap> {
+        @Override
+        public void onAdd(V1ConfigMap obj) {
+            if (!obj.getMetadata().getName().equals(configMapName)) return;
+
+            if (configHashes.size() > 0) {
+                LOGGER.warn("ConfigMap created but should already exist? (namespace: {}, name: {})", namespace, configMapName);
+            }
+
+            processUpdate(obj);
+        }
+
+        @Override
+        public void onUpdate(V1ConfigMap oldObj, V1ConfigMap newObj) {
+            V1ObjectMeta meta = newObj.getMetadata();
+            if (meta == null || meta.getName() == null || !meta.getName().equals(configMapName)) return;
+
+            LOGGER.info("ConfigMap updated (namespace: {}, name: {})", namespace, configMapName);
+            processUpdate(newObj);
+
+            firstReqLatch.countDown();
+        }
+
+        @Override
+        public void onDelete(V1ConfigMap obj, boolean deletedFinalStateUnknown) {
+            LOGGER.info("ConfigMap deleted (namespace: {}, name: {})", namespace, configMapName);
+        }
     }
 
     private void processUpdate(@NotNull V1ConfigMap configMap) {

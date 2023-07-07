@@ -112,8 +112,6 @@ public abstract class ConfigCollection<T extends Config> {
         public void onConfigDelete(@NotNull String fileName) {
             final T config = configs.remove(fileName);
 
-            System.out.println("Deleted config: " + fileName);
-
             ConfigUpdate<T> update = new ConfigUpdate<>(fileName, config, ConfigUpdate.Type.DELETE);
             this.propagateUpdate(fileName, update);
         }
