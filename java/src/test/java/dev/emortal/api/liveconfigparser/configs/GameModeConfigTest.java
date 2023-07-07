@@ -10,30 +10,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-public class GameModeConfigTest {
+public final class GameModeConfigTest {
     private static final Path TEST_FILES_PATH = Path.of("../testfiles");
     private static final Gson GSON = new Gson();
 
     @Test
     public void testLoading() throws IOException {
         try (Stream<Path> fileStream = Files.list(TEST_FILES_PATH)) {
-            fileStream.forEach(path -> {
-                try (BufferedReader reader = Files.newBufferedReader(path)) {
-                    GameModeConfig config = GSON.fromJson(reader, GameModeConfig.class);
-                    config.setFileName(path.getFileName().toString());
-
-                    System.out.println("Config (" + config.getId() + "): " + config);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            fileStream.filter(Files::isRegularFile)
+                    .filter(path -> path.toString()
+                            .endsWith(".json"))
+                    .forEach(path -> {
+                        try (BufferedReader reader = Files.newBufferedReader(path)) {
+                            GameModeConfig config = GSON.fromJson(reader, GameModeConfig.class);
+                            System.out.println("Config (" + config.id() + "): " + config);
+                        } catch (IOException exception) {
+                            throw new RuntimeException(exception);
+                        }
+                    });
         }
-    }
-
-    /**
-     * @return The path to the temporary directory
-     */
-    private Path saveResourcesToTempDir() {
-        return null; // TODO
     }
 }

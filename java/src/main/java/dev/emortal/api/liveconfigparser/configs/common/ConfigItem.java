@@ -1,14 +1,7 @@
 package dev.emortal.api.liveconfigparser.configs.common;
 
-import lombok.Data;
-
 import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
-@Data
-public class ConfigItem {
-    private String material;
-    private int slot;
-
-    private String name;
-    private List<String> lore;
+public record ConfigItem(@NotNull String material, int slot, @NotNull String name, @NotNull List<String> lore) {
 }

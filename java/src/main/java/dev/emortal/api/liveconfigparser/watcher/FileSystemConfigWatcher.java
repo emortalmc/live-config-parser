@@ -17,14 +17,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-public class FileSystemConfigWatcher {
+public final class FileSystemConfigWatcher implements ConfigWatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemConfigWatcher.class);
 
-    private final @NotNull Path basePath;
-    private final @NotNull ConfigWatcherConsumer consumer;
+    private final Path basePath;
+    private final ConfigWatcherConsumer consumer;
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private final @NotNull WatchService watchService;
+    private final WatchService watchService;
 
     public FileSystemConfigWatcher(@NotNull Path path, @NotNull ConfigWatcherConsumer consumer) throws IOException {
         if (Files.notExists(path)) {
@@ -73,7 +73,7 @@ public class FileSystemConfigWatcher {
                     }
 
                     WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
-                    final Path path = this.basePath.resolve(pathEvent.context());
+                    Path path = this.basePath.resolve(pathEvent.context());
                     if (!path.getFileName().toString().endsWith(".json")) {
                         LOGGER.warn("Non-json file was modified: " + path);
                         continue;
@@ -88,15 +88,19 @@ public class FileSystemConfigWatcher {
                             String fileContents = Files.readString(path);
                             this.consumer.onConfigModify(path.getFileName().toString(), fileContents);
                         }
-                        case "ENTRY_DELETE" -> {
-                            this.consumer.onConfigDelete(path.getFileName().toString());
-                        }
+                        case "ENTRY_DELETE" -> this.consumer.onConfigDelete(path.getFileName().toString());
                     }
                 }
                 key.reset();
-            } catch (final Exception exception) {
+            } catch (Exception exception) {
                 LOGGER.error("Error while trying to dispatch update", exception);
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.executor.shutdown();
+        this.watchService.close();
     }
 }

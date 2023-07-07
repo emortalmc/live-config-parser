@@ -1,13 +1,9 @@
 package dev.emortal.api.liveconfigparser.watcher;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.kubernetes.client.ProtoClient;
 import io.kubernetes.client.informer.ResourceEventHandler;
 import io.kubernetes.client.informer.SharedIndexInformer;
 import io.kubernetes.client.informer.SharedInformerFactory;
-import io.kubernetes.client.openapi.ApiCallback;
 import io.kubernetes.client.openapi.ApiClient;
-import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ConfigMapList;
@@ -21,29 +17,25 @@ import org.slf4j.LoggerFactory;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
-public class KubernetesConfigWatcher {
+public final class KubernetesConfigWatcher implements ConfigWatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesConfigWatcher.class);
 
-    private final @NotNull ApiClient kubeClient;
-    private final @NotNull CoreV1Api api;
+    private final ApiClient kubeClient;
+    private final CoreV1Api api;
 
-    private final @NotNull String namespace;
-    private final @NotNull String configMapName;
+    private final String namespace;
+    private final String configMapName;
 
-    private final @NotNull ConfigWatcherConsumer consumer;
+    private final ConfigWatcherConsumer consumer;
 
-    private final @NotNull Map<String, byte[]> configHashes = new HashMap<>();
+    private final Map<String, byte[]> configHashes = new HashMap<>();
 
-    private final @NotNull SharedIndexInformer<V1ConfigMap> indexInformer;
+    private final SharedIndexInformer<V1ConfigMap> indexInformer;
 
     private final CountDownLatch firstReqLatch = new CountDownLatch(1);
 
@@ -169,6 +161,7 @@ public class KubernetesConfigWatcher {
         }
     }
 
+    @Override
     public void close() {
         this.indexInformer.stop();
     }

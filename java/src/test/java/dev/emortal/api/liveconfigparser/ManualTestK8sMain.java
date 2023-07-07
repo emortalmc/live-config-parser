@@ -8,14 +8,15 @@ import io.kubernetes.client.util.Config;
 import java.io.IOException;
 import java.util.List;
 
-public class ManualTestK8sMain {
+public final class ManualTestK8sMain {
     public static void main(String[] args) throws IOException {
         ApiClient apiClient = Config.defaultClient();
 
-        final GameModeCollection collection = new GameModeCollection(apiClient, "emortalmc", "gamemodes");
-        final List<GameModeConfig> configs = collection.getAllConfigs(update -> {
-            System.out.println("Updated: " + update.getConfig().getId() + " (type: " + update.getType() + ")");
-        });
-        System.out.println("Loaded " + configs.size() + " configs");
+        try (var collection = new GameModeCollection(apiClient, "emortalmc", "gamemodes")) {
+            var configs = collection.getAllConfigs(update -> System.out.println("Updated: " + update.config().id() + " (type: " + update.type() + ")"));
+            System.out.println("Loaded " + configs.size() + " configs");
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
     }
 }

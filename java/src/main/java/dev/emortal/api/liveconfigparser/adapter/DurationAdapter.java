@@ -8,7 +8,7 @@ import com.google.gson.JsonParseException;
 import java.lang.reflect.Type;
 import java.time.Duration;
 
-public class DurationAdapter implements JsonDeserializer<Duration> {
+public final class DurationAdapter implements JsonDeserializer<Duration> {
 
     @Override
     public Duration deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {

@@ -13,15 +13,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 
-public class GameModeCollection extends ConfigCollection<GameModeConfig> {
+public final class GameModeCollection extends ConfigCollection<GameModeConfig> {
     public static final Path FILE_SYSTEM_PATH = Path.of("./config/gamemodes");
 
-    private static final @Nullable String NAMESPACE = System.getenv("NAMESPACE");
-    private static final @Nullable String CONFIG_MAP_NAME = "gamemodes";
+    private static final String NAMESPACE = System.getenv("NAMESPACE");
+    private static final String CONFIG_MAP_NAME = "gamemodes";
 
-    public GameModeCollection(@Nullable ApiClient kubeClient, @Nullable String namespace, @Nullable String configMapName)
-            throws IOException {
-
+    public GameModeCollection(@Nullable ApiClient kubeClient, @Nullable String namespace, @Nullable String configMapName) throws IOException {
         super(kubeClient, new Parser(), FILE_SYSTEM_PATH,
                 namespace == null ? NAMESPACE : namespace,
                 configMapName == null ? CONFIG_MAP_NAME : configMapName);
@@ -35,7 +33,7 @@ public class GameModeCollection extends ConfigCollection<GameModeConfig> {
         super(null, new Parser(), path, NAMESPACE, CONFIG_MAP_NAME);
     }
 
-    private static class Parser implements ConfigParser<GameModeConfig> {
+    private static final class Parser implements ConfigParser<GameModeConfig> {
         private static final Gson GSON = new GsonBuilder()
                 .registerTypeAdapter(Duration.class, new DurationAdapter())
                 .create();

@@ -1,9 +1,6 @@
 package dev.emortal.api.liveconfigparser.configs.common;
 
-import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 
-@Data
-public class ConfigSkin {
-    private String texture;
-    private String signature;
+public record ConfigSkin(@NotNull String texture, @NotNull String signature) {
 }
