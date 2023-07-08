@@ -27,6 +27,8 @@ public abstract class ConfigCollection<T extends Config> implements AutoCloseabl
     private final ConfigWatcher watcher;
 
     private final Map<String, T> configs = new HashMap<>();
+    private final Map<String, String> fileNameToId = new HashMap<>();
+
     private final Map<String, List<Consumer<ConfigUpdate<T>>>> updateListeners = new ConcurrentHashMap<>();
     private final List<Consumer<ConfigUpdate<T>>> globalListeners = new ArrayList<>();
 
@@ -90,35 +92,40 @@ public abstract class ConfigCollection<T extends Config> implements AutoCloseabl
         public void onConfigCreate(@NotNull String fileName, @NotNull String fileContents) {
             try {
                 T config = ConfigCollection.this.parser.parse(fileContents);
+                ConfigCollection.this.fileNameToId.put(fileName, config.id());
                 ConfigCollection.this.configs.put(config.id(), config);
-                this.propagateUpdate(new ConfigUpdate<>(config, ConfigUpdate.Type.CREATE));
-            } catch (ConfigParseException e) {
-                throw new RuntimeException(e);
+                this.propagateUpdate(config.id(), new ConfigUpdate<>(null, config, ConfigUpdate.Type.CREATE));
+            } catch (ConfigParseException exception) {
+                throw new RuntimeException(exception);
             }
         }
 
         @Override
         public void onConfigModify(@NotNull String fileName, @NotNull String fileContents) {
             try {
-                T config = ConfigCollection.this.parser.parse(fileContents);
-                this.propagateUpdate(new ConfigUpdate<>(config, ConfigUpdate.Type.MODIFY));
-            } catch (ConfigParseException e) {
-                throw new RuntimeException(e);
+                T newConfig = ConfigCollection.this.parser.parse(fileContents);
+                T oldConfig = ConfigCollection.this.configs.get(newConfig.id());
+                ConfigCollection.this.fileNameToId.put(fileName, newConfig.id());
+                ConfigCollection.this.configs.put(newConfig.id(), newConfig);
+                this.propagateUpdate(newConfig.id(), new ConfigUpdate<>(oldConfig, newConfig, ConfigUpdate.Type.MODIFY));
+            } catch (ConfigParseException exception) {
+                throw new RuntimeException(exception);
             }
         }
 
         @Override
         public void onConfigDelete(@NotNull String fileName) {
-            T config = ConfigCollection.this.configs.remove(fileName);
-            this.propagateUpdate(new ConfigUpdate<>(config, ConfigUpdate.Type.DELETE));
+            String id = ConfigCollection.this.fileNameToId.get(fileName);
+            T oldConfig = ConfigCollection.this.configs.remove(id);
+            this.propagateUpdate(id, new ConfigUpdate<>(oldConfig, null, ConfigUpdate.Type.DELETE));
         }
 
-        private void propagateUpdate(@NotNull ConfigUpdate<T> update) {
+        private void propagateUpdate(@NotNull String id, @NotNull ConfigUpdate<T> update) {
             for (var listener : ConfigCollection.this.globalListeners) {
                 listener.accept(update);
             }
 
-            final List<Consumer<ConfigUpdate<T>>> listeners = ConfigCollection.this.updateListeners.get(update.config().id());
+            List<Consumer<ConfigUpdate<T>>> listeners = ConfigCollection.this.updateListeners.get(id);
             if (listeners != null) {
                 for (var listener : listeners) {
                     listener.accept(update);
