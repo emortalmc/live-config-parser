@@ -52,7 +52,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
         this.indexInformer = this.startInformer();
 
         try {
-            boolean result = this.firstReqLatch.await(10, TimeUnit.SECONDS);
+            boolean result = this.firstReqLatch.await(5, TimeUnit.SECONDS);
             if (!result) {
                 LOGGER.error("Timed out getting initial ConfigMap (namespace: {}, name: {})", this.namespace, this.configMapName);
             } else {
@@ -69,7 +69,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
         SharedIndexInformer<V1ConfigMap> configInformer = factory.sharedIndexInformerFor((CallGeneratorParams params) -> {
                     String version;
                     if (params.resourceVersion == null) {
-                        version = null;
+                        version = "0";
                     } else {
                         int parsedVersion = Integer.parseInt(params.resourceVersion);
                         version = String.valueOf(parsedVersion == 0 ? parsedVersion : parsedVersion - 1);
@@ -95,11 +95,13 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
         public void onAdd(V1ConfigMap obj) {
             if (!obj.getMetadata().getName().equals(configMapName)) return;
 
-            if (configHashes.size() > 0) {
+            if (KubernetesConfigWatcher.this.configHashes.size() > 0) {
                 LOGGER.warn("ConfigMap created but should already exist? (namespace: {}, name: {})", namespace, configMapName);
             }
 
-            processUpdate(obj);
+            LOGGER.info("ConfigMap updated (namespace: {}, name: {})", namespace, configMapName);
+
+            KubernetesConfigWatcher.this.processUpdate(obj);
         }
 
         @Override
@@ -108,9 +110,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             if (meta == null || meta.getName() == null || !meta.getName().equals(configMapName)) return;
 
             LOGGER.info("ConfigMap updated (namespace: {}, name: {})", namespace, configMapName);
-            processUpdate(newObj);
-
-            firstReqLatch.countDown();
+            KubernetesConfigWatcher.this.processUpdate(newObj);
         }
 
         @Override
@@ -159,6 +159,8 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
                 this.consumer.onConfigDelete(deletedConfig);
             }
         }
+
+        this.firstReqLatch.countDown();
     }
 
     @Override
