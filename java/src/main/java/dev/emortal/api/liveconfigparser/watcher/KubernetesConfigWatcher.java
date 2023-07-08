@@ -68,7 +68,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
 
         SharedIndexInformer<V1ConfigMap> configInformer = factory.sharedIndexInformerFor((CallGeneratorParams params) -> {
                     String version;
-                    if (params.resourceVersion == null) {
+                    if (params.resourceVersion == null || params.resourceVersion.isEmpty()) {
                         version = "0";
                     } else {
                         int parsedVersion = Integer.parseInt(params.resourceVersion);
