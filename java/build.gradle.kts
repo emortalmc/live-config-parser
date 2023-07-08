@@ -1,10 +1,10 @@
 plugins {
-    id("java-library")
-    id("maven-publish")
+    `java-library`
+    `maven-publish`
 }
 
-group "dev.emortal.api"
-version "1.0"
+group = "dev.emortal.api"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -16,7 +16,6 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("io.kubernetes:client-java:18.0.0")
-    implementation("com.google.guava:guava:32.1.1-jre")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.3")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
@@ -24,8 +23,13 @@ dependencies {
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.7")
 }
 
-publishing {
+tasks {
+    test {
+        useJUnitPlatform()
+    }
+}
 
+publishing {
     repositories {
         maven {
             name = "development"
@@ -46,19 +50,12 @@ publishing {
     }
 
     publications {
-        maven(MavenPublication) {
-            groupId = "dev.emortal.api"
-            artifactId = "live-config-parser"
-
-            def commitHash = System.getenv("COMMIT_HASH_SHORT")
-            def releaseVersion = System.getenv("RELEASE_VERSION")
+        create<MavenPublication>("maven") {
+            val commitHash = System.getenv("COMMIT_HASH_SHORT")
+            val releaseVersion = System.getenv("RELEASE_VERSION")
             version = commitHash ?: releaseVersion ?: "local"
 
-            from components.java
+            from(components["java"])
         }
     }
-}
-
-test {
-    useJUnitPlatform()
 }
