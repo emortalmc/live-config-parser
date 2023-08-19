@@ -39,8 +39,6 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
 
     private final CountDownLatch firstReqLatch = new CountDownLatch(1);
 
-    private String resourceVersion = "0";
-
     public KubernetesConfigWatcher(@NotNull ApiClient kubeClient, @NotNull String namespace, @NotNull String configMapName,
                                    @NotNull ConfigWatcherConsumer consumer) {
         this.kubeClient = kubeClient;
@@ -69,10 +67,19 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
         SharedInformerFactory factory = new SharedInformerFactory(this.kubeClient);
 
         SharedIndexInformer<V1ConfigMap> configInformer = factory.sharedIndexInformerFor((CallGeneratorParams params) -> {
+                    String version = "0";
+                    if (params.resourceVersion != null && !params.resourceVersion.isEmpty()) {
+                        version = params.resourceVersion;
+
+                        if (!version.equals("0")) {
+                            version = String.valueOf(Integer.parseInt(version) + 1);
+                        }
+                    }
+
                     return this.api.listNamespacedConfigMapCall(
                             this.namespace, null, null, null,
                             "metadata.name=" + this.configMapName, null, null,
-                            this.resourceVersion, null, params.timeoutSeconds, params.watch, null
+                            version, null, params.timeoutSeconds, params.watch, null
                     );
                 },
                 V1ConfigMap.class, V1ConfigMapList.class, 10 * 60 * 1000L);
@@ -87,7 +94,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
     private final class EventHandler implements ResourceEventHandler<V1ConfigMap> {
         @Override
         public void onAdd(V1ConfigMap obj) {
-            if (!obj.getMetadata().getName().equals(KubernetesConfigWatcher.this.configMapName)) return;
+            if (!obj.getMetadata().getName().equals(configMapName)) return;
 
             if (!KubernetesConfigWatcher.this.configHashes.isEmpty()) {
                 LOGGER.warn("ConfigMap created but should already exist? (namespace: {}, name: {})", namespace, configMapName);
@@ -105,15 +112,10 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
 
             LOGGER.info("ConfigMap updated (namespace: {}, name: {})", namespace, configMapName);
             KubernetesConfigWatcher.this.processUpdate(newObj);
-
-            KubernetesConfigWatcher.this.resourceVersion = meta.getResourceVersion();
         }
 
         @Override
         public void onDelete(V1ConfigMap obj, boolean deletedFinalStateUnknown) {
-            V1ObjectMeta meta = obj.getMetadata();
-            if (meta == null || meta.getName() == null || !meta.getName().equals(configMapName)) return;
-
             LOGGER.info("ConfigMap deleted (namespace: {}, name: {})", namespace, configMapName);
         }
     }
