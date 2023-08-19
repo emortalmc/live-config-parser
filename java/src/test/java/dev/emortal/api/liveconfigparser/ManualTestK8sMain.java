@@ -11,7 +11,7 @@ public final class ManualTestK8sMain {
         ApiClient apiClient = Config.defaultClient();
 
         try (var collection = new GameModeCollection(apiClient, "emortalmc", "gamemodes")) {
-            var configs = collection.getAllConfigs(update -> System.out.println("Updated: " + update.config().id() + " (type: " + update.type() + ")"));
+            var configs = collection.getAllConfigs(update -> System.out.println("Updated: " + update.newConfig().id() + " (type: " + update.type() + ")"));
             System.out.println("Loaded " + configs.size() + " configs");
 
             while (true) {
@@ -21,8 +21,8 @@ public final class ManualTestK8sMain {
                     e.printStackTrace();
                 }
             }
-        } catch (Exception exception) {
-            exception.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
