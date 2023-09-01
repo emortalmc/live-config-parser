@@ -1,21 +1,25 @@
 package dev.emortal.api.liveconfigparser.adapter;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Type;
+import java.io.IOException;
 import java.time.Duration;
 
-public final class DurationAdapter implements JsonDeserializer<Duration> {
+public final class DurationAdapter extends TypeAdapter<Duration> {
 
     @Override
-    public Duration deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-        if (!json.isJsonPrimitive()) throw new JsonParseException("Duration must be a string");
-
-        String duration = json.getAsString();
+    public @Nullable Duration read(@NotNull JsonReader in) throws IOException {
+        String duration = in.nextString();
         if (duration.isEmpty()) return null;
         return Duration.parse(duration);
+    }
+
+    @Override
+    public void write(@NotNull JsonWriter out, @NotNull Duration value) throws IOException {
+        out.value(value.toString());
     }
 }

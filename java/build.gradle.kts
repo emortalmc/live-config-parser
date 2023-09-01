@@ -23,7 +23,19 @@ dependencies {
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.7")
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(20))
+    }
+}
+
 tasks {
+    compileJava {
+        options.compilerArgs.addAll(listOf(
+                "--release", "20",
+                "--enable-preview"
+        ))
+    }
     test {
         useJUnitPlatform()
     }

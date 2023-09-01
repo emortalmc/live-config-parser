@@ -1,7 +1,9 @@
 package dev.emortal.api.liveconfigparser.configs;
 
 import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeCollection;
+import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeConfig;
 import io.kubernetes.client.openapi.ApiClient;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,18 +14,27 @@ import java.nio.file.Files;
 public final class LiveConfigCollection implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveConfigCollection.class);
 
-    private final @Nullable GameModeCollection gameModeCollection;
-
-    public LiveConfigCollection(@Nullable ApiClient apiClient) throws IOException {
-        if (apiClient != null || Files.exists(GameModeCollection.FILE_SYSTEM_PATH)) {
-            this.gameModeCollection = new GameModeCollection(apiClient);
+    public static @NotNull LiveConfigCollection create(@Nullable ApiClient client) throws IOException {
+        GameModeCollection collection;
+        if (client != null) {
+            collection = GameModeCollection.fromKubernetes(client);
+        } else if (Files.exists(GameModeCollection.FILE_SYSTEM_PATH)) {
+            LOGGER.warn("Could not load game modes from Kubernetes. Falling back to local path...");
+            collection = GameModeCollection.fromLocalPath(GameModeCollection.FILE_SYSTEM_PATH);
         } else {
-            LOGGER.warn("GameModeCollection not found, disabling");
-            this.gameModeCollection = null;
+            LOGGER.warn("Could not load game modes from Kubernetes or local path. Disabling...");
+            collection = null;
         }
+        return new LiveConfigCollection(collection);
     }
 
-    public @Nullable GameModeCollection gameModes() {
+    private final @Nullable ConfigProvider<GameModeConfig> gameModeCollection;
+
+    private LiveConfigCollection(@Nullable GameModeCollection collection) {
+        this.gameModeCollection = collection;
+    }
+
+    public @Nullable ConfigProvider<GameModeConfig> gameModes() {
         return this.gameModeCollection;
     }
 

@@ -1,15 +1,20 @@
 package dev.emortal.api.liveconfigparser;
 
 import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeCollection;
+import dev.emortal.api.liveconfigparser.configs.gamemode.GameModeConfig;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
 
 public class ManualTestMain {
+
     public static void main(String[] args) {
-        try (var collection = new GameModeCollection(Path.of("testfiles"))) {
-            var configs = collection.getAllConfigs(update -> System.out.println("Updated: " + update.newConfig().id() + " (type: " + update.type() + ")"));
+        try (GameModeCollection collection = GameModeCollection.fromLocalPath(Path.of("testfiles"))) {
+            collection.addGlobalUpdateListener(update -> System.out.println("Got update for config file: " + update));
+            Collection<GameModeConfig> configs = collection.allConfigs();
             System.out.println("Loaded " + configs.size() + " configs");
-        } catch (Exception exception) {
+        } catch (IOException exception) {
             exception.printStackTrace();
         }
     }

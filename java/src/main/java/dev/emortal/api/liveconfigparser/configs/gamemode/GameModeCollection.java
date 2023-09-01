@@ -7,7 +7,6 @@ import dev.emortal.api.liveconfigparser.configs.ConfigCollection;
 import dev.emortal.api.liveconfigparser.parser.ConfigParser;
 import io.kubernetes.client.openapi.ApiClient;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -19,23 +18,29 @@ public final class GameModeCollection extends ConfigCollection<GameModeConfig> {
     private static final String NAMESPACE = System.getenv("NAMESPACE");
     private static final String CONFIG_MAP_NAME = "gamemodes";
 
-    public GameModeCollection(@Nullable ApiClient kubeClient, @Nullable String namespace, @Nullable String configMapName) throws IOException {
-        super(kubeClient, new Parser(), FILE_SYSTEM_PATH,
-                namespace == null ? NAMESPACE : namespace,
-                configMapName == null ? CONFIG_MAP_NAME : configMapName);
+    public static @NotNull GameModeCollection fromKubernetes(@NotNull ApiClient client, @NotNull String namespace, @NotNull String configMapName) {
+        return new GameModeCollection(client, namespace, configMapName);
     }
 
-    public GameModeCollection(@Nullable ApiClient kubeClient) throws IOException {
-        super(kubeClient, new Parser(), FILE_SYSTEM_PATH, NAMESPACE, CONFIG_MAP_NAME);
+    public static @NotNull GameModeCollection fromKubernetes(@NotNull ApiClient client) {
+        return fromKubernetes(client, NAMESPACE, CONFIG_MAP_NAME);
     }
 
-    public GameModeCollection(Path path) throws IOException {
-        super(null, new Parser(), path, NAMESPACE, CONFIG_MAP_NAME);
+    public static @NotNull GameModeCollection fromLocalPath(@NotNull Path localPath) throws IOException {
+        return new GameModeCollection(localPath);
+    }
+
+    private GameModeCollection(@NotNull ApiClient client, @NotNull String namespace, @NotNull String configMapName) {
+        super(new Parser(), client, namespace, configMapName);
+    }
+
+    private GameModeCollection(@NotNull Path localPath) throws IOException {
+        super(new Parser(), localPath);
     }
 
     private static final class Parser implements ConfigParser<GameModeConfig> {
         private static final Gson GSON = new GsonBuilder()
-                .registerTypeAdapter(Duration.class, new DurationAdapter())
+                .registerTypeAdapter(Duration.class, new DurationAdapter().nullSafe())
                 .create();
 
         @Override
