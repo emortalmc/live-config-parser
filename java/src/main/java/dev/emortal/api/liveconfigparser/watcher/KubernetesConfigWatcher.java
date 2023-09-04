@@ -1,5 +1,6 @@
 package dev.emortal.api.liveconfigparser.watcher;
 
+import com.google.gson.reflect.TypeToken;
 import io.kubernetes.client.informer.ListerWatcher;
 import io.kubernetes.client.informer.ResourceEventHandler;
 import io.kubernetes.client.informer.SharedIndexInformer;
@@ -118,7 +119,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
         public @NotNull Watchable<V1ConfigMap> watch(@NotNull CallGeneratorParams params) throws ApiException {
             Call call = this.generateCall(params);
             call = this.client.getHttpClient().newCall(call.request());
-            return Watch.createWatch(this.client, call, V1ConfigMap.class);
+            return Watch.createWatch(this.client, call, TypeToken.getParameterized(Watch.Response.class, V1ConfigMap.class).getType());
         }
 
         private @NotNull Call generateCall(@NotNull CallGeneratorParams params) throws ApiException {
