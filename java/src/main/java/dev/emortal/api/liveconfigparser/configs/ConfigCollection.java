@@ -7,19 +7,19 @@ import dev.emortal.api.liveconfigparser.watcher.ConfigWatcherConsumer;
 import dev.emortal.api.liveconfigparser.watcher.FileSystemConfigWatcher;
 import dev.emortal.api.liveconfigparser.watcher.KubernetesConfigWatcher;
 import io.kubernetes.client.openapi.ApiClient;
-import java.util.Collection;
-import java.util.Collections;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 public abstract class ConfigCollection<T extends Config> implements ConfigProvider<T> {
@@ -32,7 +32,7 @@ public abstract class ConfigCollection<T extends Config> implements ConfigProvid
     private final Map<String, String> fileNameToId = new HashMap<>();
 
     private final Map<String, List<Consumer<ConfigUpdate>>> updateListeners = Collections.synchronizedMap(new HashMap<>());
-    private final List<Consumer<ConfigUpdate>> globalListeners = new ArrayList<>();
+    private final List<Consumer<ConfigUpdate>> globalListeners = new CopyOnWriteArrayList<>();
 
     protected ConfigCollection(@NotNull ConfigParser<T> parser, @NotNull ApiClient client, @NotNull String namespace,
                                @NotNull String configMapName) {
@@ -57,7 +57,7 @@ public abstract class ConfigCollection<T extends Config> implements ConfigProvid
 
     @Override
     public void addUpdateListener(@NotNull String id, @NotNull Consumer<ConfigUpdate> listener) {
-        this.updateListeners.computeIfAbsent(id, k -> new ArrayList<>()).add(listener);
+        this.updateListeners.computeIfAbsent(id, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override

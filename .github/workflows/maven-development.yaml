@@ -5,7 +5,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Get Commit Hash
         id: commit
@@ -14,8 +15,8 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '20'
-          distribution: 'temurin'
+          java-version: '21'
+          distribution: 'zulu'
 
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1

@@ -34,9 +34,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class KubernetesConfigWatcher implements ConfigWatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesConfigWatcher.class);
 
-    private final @NotNull ApiClient client;
-    private final @NotNull CoreV1Api api;
-
     private final @NotNull String namespace;
     private final @NotNull String configMapName;
 
@@ -49,16 +46,14 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
 
     public KubernetesConfigWatcher(@NotNull ApiClient client, @NotNull String namespace, @NotNull String configMapName,
                                    @NotNull ConfigWatcherConsumer consumer) {
-        this.client = client;
-        this.api = new CoreV1Api(client);
-
         this.namespace = namespace;
         this.configMapName = configMapName;
 
         this.consumer = consumer;
 
+        CoreV1Api api = new CoreV1Api(client);
         ListerWatcher<V1ConfigMap, V1ConfigMapList> listerWatcher = new ConfigMapListerWatcher(client, api, namespace, configMapName);
-        this.indexInformer = this.startInformer(listerWatcher);
+        this.indexInformer = this.startInformer(client, listerWatcher);
 
         try {
             boolean result = this.initialRequestLatch.await(5, TimeUnit.SECONDS);
@@ -68,14 +63,13 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
                 LOGGER.info("Got initial ConfigMap (namespace: {}, name: {})", namespace, configMapName);
             }
         } catch (InterruptedException exception) {
-            // If the thread is interrupted, we are handling the interruption here by throwing a RuntimeException,
-            // causing the startup of this to fail.
-            throw new RuntimeException(exception);
+            Thread.currentThread().interrupt();
         }
     }
 
-    private @NotNull SharedIndexInformer<V1ConfigMap> startInformer(@NotNull ListerWatcher<V1ConfigMap, V1ConfigMapList> listerWatcher) {
-        SharedInformerFactory factory = new SharedInformerFactory(this.client);
+    private @NotNull SharedIndexInformer<V1ConfigMap> startInformer(@NotNull ApiClient apiClient,
+                                                                    @NotNull ListerWatcher<V1ConfigMap, V1ConfigMapList> listerWatcher) {
+        SharedInformerFactory factory = new SharedInformerFactory(apiClient);
 
         SharedIndexInformer<V1ConfigMap> configInformer = factory.sharedIndexInformerFor(listerWatcher, V1ConfigMap.class, 10 * 60 * 1000L, this::onError);
         configInformer.addEventHandler(new EventHandler());

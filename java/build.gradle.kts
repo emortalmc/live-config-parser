@@ -25,20 +25,12 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(20))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
-tasks {
-    compileJava {
-        options.compilerArgs.addAll(listOf(
-                "--release", "20",
-                "--enable-preview"
-        ))
-    }
-    test {
-        useJUnitPlatform()
-    }
+tasks.test {
+    useJUnitPlatform()
 }
 
 publishing {

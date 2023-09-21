@@ -1,15 +1,24 @@
 package dev.emortal.api.liveconfigparser.configs;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public sealed interface ConfigUpdate {
+public sealed interface ConfigUpdate<T extends Config> {
 
-    record Create<T extends Config>(@NotNull T newConfig) implements ConfigUpdate {
+    default @Nullable T oldConfig() {
+        return null;
     }
 
-    record Modify<T extends Config>(@NotNull T oldConfig, @NotNull T newConfig) implements ConfigUpdate {
+    default @Nullable T newConfig() {
+        return null;
     }
 
-    record Delete<T extends Config>(@NotNull T oldConfig) implements ConfigUpdate {
+    record Create<T extends Config>(@NotNull T newConfig) implements ConfigUpdate<T> {
+    }
+
+    record Modify<T extends Config>(@NotNull T oldConfig, @NotNull T newConfig) implements ConfigUpdate<T> {
+    }
+
+    record Delete<T extends Config>(@NotNull T oldConfig) implements ConfigUpdate<T> {
     }
 }
