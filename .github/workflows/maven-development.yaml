@@ -25,7 +25,7 @@ jobs:
           gradle-executable: java/gradlew
 
       - name: Publish package
-        uses: gradle/gradle-build-action@v2.7.0
+        uses: gradle/gradle-build-action@v2.8.1
         with:
           arguments: publishMavenPublicationToDevelopmentRepository
           build-root-directory: java
