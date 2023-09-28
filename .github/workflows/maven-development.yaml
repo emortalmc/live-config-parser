@@ -1,36 +1,13 @@
-name: Publish to development (snapshot) repo
+name: "Publish to development (snapshot) repo"
+
 on: push
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Get Commit Hash
-        id: commit
-        uses: pr-mpt/actions-commit-hash@v2
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
+      - uses: "emortalmc/actions/java/publish-dev@main"
         with:
-          java-version: '21'
-          distribution: 'zulu'
-
-      - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v1
-        with:
-          wrapper-directory: java/gradle/wrapper
-          gradle-executable: java/gradlew
-
-      - name: Publish package
-        uses: gradle/gradle-build-action@v2.7.0
-        with:
-          arguments: publishMavenPublicationToDevelopmentRepository
-          build-root-directory: java
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_SECRET: ${{ secrets.MAVEN_SECRET }}
-          COMMIT_HASH: ${{ steps.commit.outputs.hash }}
-          COMMIT_HASH_SHORT: ${{ steps.commit.outputs.short }}
+          maven-username: "${{ secrets.MAVEN_USERNAME }}"
+          maven-password: "${{ secrets.MAVEN_SECRET }}"
+          root-directory: "java"
