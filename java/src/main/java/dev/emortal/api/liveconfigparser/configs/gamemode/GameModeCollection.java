@@ -3,6 +3,7 @@ package dev.emortal.api.liveconfigparser.configs.gamemode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import dev.emortal.api.liveconfigparser.adapter.DurationAdapter;
+import dev.emortal.api.liveconfigparser.adapter.NullListToEmptyFactory;
 import dev.emortal.api.liveconfigparser.configs.ConfigCollection;
 import dev.emortal.api.liveconfigparser.parser.ConfigParser;
 import io.kubernetes.client.openapi.ApiClient;
@@ -41,6 +42,7 @@ public final class GameModeCollection extends ConfigCollection<GameModeConfig> {
     private static final class Parser implements ConfigParser<GameModeConfig> {
         private static final Gson GSON = new GsonBuilder()
                 .registerTypeAdapter(Duration.class, new DurationAdapter().nullSafe())
+                .registerTypeAdapterFactory(NullListToEmptyFactory.INSTANCE)
                 .create();
 
         @Override
