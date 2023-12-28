@@ -122,14 +122,14 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
                 version = params.resourceVersion;
 
                 if (!version.equals("0")) {
-                    version = String.valueOf(Integer.parseInt(version) + 1);
+                    version = String.valueOf(Integer.parseInt(version));
                 }
             }
 
             return this.api.listNamespacedConfigMapCall(
                     this.namespace, null, null, null,
                     "metadata.name=" + this.configMapName, null, null,
-                    version, null, params.timeoutSeconds, params.watch, null
+                    version, null, true, params.timeoutSeconds, params.watch, null
             );
         }
     }
