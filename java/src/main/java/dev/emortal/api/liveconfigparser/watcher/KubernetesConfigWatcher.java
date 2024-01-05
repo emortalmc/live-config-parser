@@ -129,7 +129,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             return this.api.listNamespacedConfigMapCall(
                     this.namespace, null, null, null,
                     "metadata.name=" + this.configMapName, null, null,
-                    version, null, false, params.timeoutSeconds, params.watch, null
+                    version, null, null, params.timeoutSeconds, params.watch, null
             );
         }
     }
