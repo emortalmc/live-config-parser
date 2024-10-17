@@ -148,7 +148,7 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
                 LOGGER.warn("ConfigMap created but should already exist? (namespace: {}, name: {})", this.namespace, this.configMapName);
             }
 
-            LOGGER.info("ConfigMap updated (namespace: {}, name: {})", this.namespace, this.configMapName);
+            LOGGER.info("ConfigMap created (namespace: {}, name: {})", this.namespace, this.configMapName);
             this.processUpdate(config);
         }
 
@@ -157,8 +157,12 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             V1ObjectMeta meta = newConfig.getMetadata();
             if (meta == null || !this.configMapName.equals(meta.getName())) return;
 
-            LOGGER.info("ConfigMap updated (namespace: {}, name: {})", this.namespace, this.configMapName);
-            this.processUpdate(newConfig);
+            LOGGER.debug("ConfigMap Kubernetes update event (namespace: {}, name: {})", this.namespace, this.configMapName);
+            if (this.processUpdate(newConfig)) {
+                LOGGER.info("ConfigMap updated (namespace: {}, name: {})", this.namespace, this.configMapName);
+            } else {
+                LOGGER.debug("ConfigMap updated but no changes (namespace: {}, name: {})", this.namespace, this.configMapName);
+            }
         }
 
         @Override
@@ -166,15 +170,20 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             LOGGER.info("ConfigMap deleted (namespace: {}, name: {})", this.namespace, this.configMapName);
         }
 
-        private void processUpdate(@NotNull V1ConfigMap configMap) {
+        /**
+         * @param configMap The updated config map
+         * @return true if any config was modified, false otherwise
+         */
+        private boolean processUpdate(@NotNull V1ConfigMap configMap) {
             Map<String, String> data = configMap.getData();
             if (data == null) {
                 LOGGER.warn("ConfigMap data is null (namespace: {}, name: {})", this.namespace, this.configMapName);
-                return;
+                return false;
             }
 
             // Clone the set as keySet is backed by the map
             Set<String> deletedConfigs = new HashSet<>(KubernetesConfigWatcher.this.configHashes.keySet());
+            boolean modified = false;
 
             for (Map.Entry<String, String> entry : data.entrySet()) {
                 String fileName = entry.getKey();
@@ -183,10 +192,11 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
                 boolean isDeleted = deletedConfigs.remove(fileName);
                 if (isDeleted) {
                     // Config already existed. Check has to see if modified.
-                    this.updateHash(fileName, fileContents);
+                    if (this.updateHash(fileName, fileContents)) modified = true;
                 } else {
                     // Config is newly created
                     this.createHash(fileName, fileContents);
+                    modified = true;
                 }
             }
 
@@ -197,6 +207,8 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             }
 
             KubernetesConfigWatcher.this.initialRequestLatch.countDown();
+
+            return modified;
         }
 
         private void createHash(@NotNull String fileName, @NotNull String contents) {
@@ -206,13 +218,16 @@ public final class KubernetesConfigWatcher implements ConfigWatcher {
             KubernetesConfigWatcher.this.consumer.onConfigCreate(fileName, contents);
         }
 
-        private void updateHash(@NotNull String fileName, @NotNull String contents) {
+        private boolean updateHash(@NotNull String fileName, @NotNull String contents) {
             byte[] existingHash = KubernetesConfigWatcher.this.configHashes.get(fileName);
             byte[] newHash = DigestUtils.md5(contents);
-            if (MessageDigest.isEqual(existingHash, newHash)) return; // Config not modified, don't need to update anything
+            if (MessageDigest.isEqual(existingHash, newHash))
+                return false; // Config not modified, don't need to update anything
 
             KubernetesConfigWatcher.this.configHashes.put(fileName, newHash);
             KubernetesConfigWatcher.this.consumer.onConfigModify(fileName, contents);
+
+            return true;
         }
     }
 }
