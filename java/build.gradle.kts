@@ -17,8 +17,8 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("io.kubernetes:client-java:19.0.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.3")
 
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.7")
 }
