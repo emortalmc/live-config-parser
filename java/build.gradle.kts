@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation("org.slf4j:slf4j-api:2.0.7")
-    compileOnly("org.jetbrains:annotations:24.0.1")
+    compileOnly("org.jetbrains:annotations:24.1.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("io.kubernetes:client-java:19.0.0")
